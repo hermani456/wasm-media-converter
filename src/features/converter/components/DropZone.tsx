@@ -58,7 +58,7 @@ export function DropZone({ onFilesDropped }: DropZoneProps) {
         ${
           isHovering
             ? "border-blue-500 bg-blue-50/50"
-            : "border-slate-300 hover:border-slate-400 bg-slate-50"
+            : "border-slate-300 hover:border-slate-400 bg-slate-50 dark:bg-slate-800"
         }
       `}
     >
@@ -70,10 +70,10 @@ export function DropZone({ onFilesDropped }: DropZoneProps) {
         />
       </div>
       <div>
-        <h3 className="text-lg font-semibold text-slate-700">
+        <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">
           {isHovering ? "Drop files here" : "Click or drag files here"}
         </h3>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           Support for Video, Audio, and Images
         </p>
       </div>

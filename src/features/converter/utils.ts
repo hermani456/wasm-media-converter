@@ -2,7 +2,6 @@
 export const FORMATS = {
   video: [
     { value: 'mp4', label: 'MP4 (H.264)' },
-    { value: 'webm', label: 'WebM (VP9)' },
     { value: 'avi', label: 'AVI' },
     { value: 'mov', label: 'MOV (QuickTime)' },
     { value: 'mkv', label: 'MKV' },
