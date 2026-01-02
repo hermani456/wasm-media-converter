@@ -58,7 +58,7 @@ export function DropZone({ onFilesDropped }: DropZoneProps) {
         ${
           isHovering
             ? "border-blue-500 bg-blue-50/50"
-            : "border-slate-300 hover:border-slate-400 bg-slate-50 dark:bg-slate-800"
+            : "border-slate-300 hover:border-slate-400 bg-slate-100 dark:bg-slate-800"
         }
       `}
     >
