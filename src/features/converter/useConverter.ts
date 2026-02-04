@@ -1,29 +1,63 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getWorker } from './worker-client';
-import type { ConvertedFile } from './types';
+import type { ConvertedFile, WorkerResponse } from './types';
 import { detectFileType, getAvailableFormats } from './utils';
 
 export function useConverter() {
   const [files, setFiles] = useState<ConvertedFile[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const isProcessing = files.some(f => f.status === 'converting');
+  
+  // keep track of object URLs to revoke them
+  const objectUrlsRef = useRef<Set<string>>(new Set());
+
+  // cleanup object URLs on unmount
+  useEffect(() => {
+    const urls = objectUrlsRef.current;
+    return () => {
+      urls.forEach(url => URL.revokeObjectURL(url));
+      urls.clear();
+    };
+  }, []);
+
+
 
   useEffect(() => {
     const worker = getWorker();
-    const handleMessage = (event: MessageEvent) => {
-      const { id, status, data, outputType, error } = event.data;
-      
-      setFiles((prev) => prev.map((f) => {
-        if (f.id !== id) return f;
-        if (status === 'completed') {
-          const blob = new Blob([data], { type: outputType === 'mp4' ? 'video/mp4' : `image/${outputType}` });
-          return { ...f, status: 'completed', url: URL.createObjectURL(blob), progress: 100 };
-        }
-        if (status === 'error') {
-           return { ...f, status: 'error', errorMessage: error };
-        }
-        return f;
-      }));
-      setIsProcessing(false);
+    
+    // initialize worker
+    worker.postMessage({ type: 'load' });
+
+    const handleMessage = (event: MessageEvent<WorkerResponse>) => {
+      const response = event.data;
+
+      if ('type' in response && response.type === 'loaded') {
+         console.log('FFmpeg loaded');
+         return;
+      }
+
+      if ('status' in response) {
+        const { id, status } = response;
+        
+        setFiles((prev) => prev.map((f) => {
+          if (f.id !== id) return f;
+          
+          if (status === 'completed') {
+            const { data, outputType } = response as Extract<WorkerResponse, { status: 'completed' }>;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const blob = new Blob([data as any], { type: outputType === 'mp4' ? 'video/mp4' : `image/${outputType}` });
+            const url = URL.createObjectURL(blob);
+            objectUrlsRef.current.add(url);
+            
+            return { ...f, status: 'completed', url, progress: 100 };
+          }
+          
+          if (status === 'error') {
+             const { error } = response as Extract<WorkerResponse, { status: 'error' }>;
+             return { ...f, status: 'error', errorMessage: error };
+          }
+          return f;
+        }));
+      }
     };
     worker.addEventListener('message', handleMessage);
     return () => worker.removeEventListener('message', handleMessage);
@@ -64,15 +98,26 @@ export function useConverter() {
     if (!fileToConvert) return;
 
     setFiles(prev => prev.map(f => f.id === id ? { ...f, status: 'converting' } : f));
-    setIsProcessing(true);
 
     const worker = getWorker();
     worker.postMessage({ 
+      type: 'convert',
       id: fileToConvert.id, 
       file: fileToConvert.file, 
       outputType: fileToConvert.outputType 
     });
   }, [files]);
+  
+  const removeFile = useCallback((id: string) => {
+      setFiles(prev => {
+          const file = prev.find(f => f.id === id);
+          if (file?.url) {
+              URL.revokeObjectURL(file.url);
+              objectUrlsRef.current.delete(file.url);
+          }
+          return prev.filter(f => f.id !== id);
+      });
+  }, []);
 
-  return { files, isProcessing, addFile, updateOutputFormat, startConversion };
+  return { files, isProcessing, addFile, updateOutputFormat, startConversion, removeFile };
 }

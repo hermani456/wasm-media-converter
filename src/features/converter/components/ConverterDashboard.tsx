@@ -3,7 +3,7 @@ import { DropZone } from "./DropZone";
 import { FileRow } from "./FileRow";
 
 export function ConverterDashboard() {
-  const { files, addFile, updateOutputFormat, startConversion } =
+  const { files, addFile, updateOutputFormat, startConversion, removeFile } =
     useConverter();
 
   const handleFilesDropped = (droppedFiles: File[]) => {
@@ -40,6 +40,7 @@ export function ConverterDashboard() {
             fileData={file}
             onFormatChange={updateOutputFormat}
             onConvert={startConversion}
+            onRemove={removeFile}
           />
         ))}
       </div>
